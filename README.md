@@ -20,7 +20,7 @@
 | **Pack** | Combine up to four grayscale maps into the R, G, B and A channels of one texture (ORM, mask maps and so on). |
 | **Unpack** | Split a packed texture back into four grayscale channel images. |
 | **Convert** | Normal → Height (tileable, UV-island or mesh-aware with an OBJ, so heights meet across UV seams), Height → Normal (Sobel) and Height → Ambient Occlusion (HBAO), with a live preview and 16-bit PNG output. |
-| **Atlas** | Drop texture sets (Albedo, Normal, ORM or separate R/AO/M, Emissive…), give each material a size, and they pack from the top-left corner into one atlas per map type, with a UV layout file. |
+| **Atlas** | Drop texture sets (Albedo, Normal, ORM or separate R/AO/M, Emissive…) into a layer stack, give each a size and drag to order them; they pack from the top-left corner into one atlas per map type, with a UV layout file. |
 | **Utility** | Flip the green channel (OpenGL ↔ DirectX normals), flip vertically or horizontally, or invert RGB. |
 | **Renamer** | Batch-rename a folder with search/replace, prefix, suffix and numbering, with a live preview before anything changes. |
 | **Injector** | Pick a material's texture maps and export a preset that `Injector.py` builds into a shading network in Maya. |

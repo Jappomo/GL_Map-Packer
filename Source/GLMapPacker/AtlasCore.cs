@@ -36,8 +36,9 @@ public static class AtlasCore
 
 	public enum Order
 	{
-		LargestFirst,
-		AsAdded
+		// The layer stack's order, top to bottom: layer 1 is placed first.
+		Stack,
+		LargestFirst
 	}
 
 	public sealed class Entry
@@ -48,6 +49,9 @@ public static class AtlasCore
 
 		// Longest side in the atlas, in pixels.
 		public int Size;
+
+		// Swatch / outline colour; stays with the material when the stack is reordered.
+		public int ColorIndex;
 
 		// Source size of the first map (for the aspect ratio).
 		public int SourceWidth;
@@ -222,7 +226,8 @@ public static class AtlasCore
 				e = new Entry
 				{
 					Name = name,
-					Size = defaultSize
+					Size = defaultSize,
+					ColorIndex = entries.Count == 0 ? 0 : entries.Max(x => x.ColorIndex) + 1
 				};
 				entries.Add(e);
 			}

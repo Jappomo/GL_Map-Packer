@@ -128,7 +128,7 @@ public partial class MainForm
 		};
 		atCapOrder = Caption("Placement order");
 		atOrderCombo = new ThemedComboBox();
-		atOrderCombo.Items.AddRange(new object[2] { "Largest first (tightest)", "As added" });
+		atOrderCombo.Items.AddRange(new object[2] { "Stack order (drag to reorder)", "Largest first (tightest)" });
 		atOrderCombo.SelectedIndex = 0;
 		atOrderCombo.SelectedIndexChanged += delegate
 		{
@@ -193,7 +193,7 @@ public partial class MainForm
 		};
 		atSettingsCard.Controls.AddRange(new Control[16] { atCapSize, atSizeCombo, atPadding, atCapOrder, atOrderCombo, atCapMask, atMaskCombo, atCapNewSize, atNewSizeCombo, atShrinkChk, atOutlineChk, atCapExport, atFormatCombo, atBitToggle, atProgress, atExportBtn });
 		// Materials.
-		atMaterialsCard = Card("Materials");
+		atMaterialsCard = Card("Layer Stack");
 		atList = new AtlasList
 		{
 			AllowDrop = true
@@ -253,7 +253,7 @@ public partial class MainForm
 		atPreview = new PreviewBox
 		{
 			EmptyText = "Drop texture sets to build an atlas",
-			EmptyHint = "Each material keeps its maps lined up across every atlas",
+			EmptyHint = "Layer 1 of the stack takes the top-left corner; drag layers to change the order",
 			AcceptsFiles = true
 		};
 		atPreview.DragDrop += AtlasDragDrop;
@@ -417,6 +417,14 @@ public partial class MainForm
 				atEntries[i].Size = Math.Min(atEntries[i].Size, pow);
 			}
 		}
+		// New layers join the bottom of the stack largest first, so they start out packed tightly;
+		// dragging them afterwards sets any other order.
+		if (atEntries.Count - before > 1)
+		{
+			List<AtlasCore.Entry> fresh = atEntries.Skip(before).OrderByDescending(e => e.Size).ThenByDescending(e => Math.Max(e.SourceWidth, e.SourceHeight)).ToList();
+			atEntries.RemoveRange(before, fresh.Count);
+			atEntries.AddRange(fresh);
+		}
 		atBitToggle.SelectedIndex = at16Bit.Count > 0 ? 1 : 0;
 		RelayoutAtlas();
 		int added = atEntries.Count - before;
@@ -446,7 +454,8 @@ public partial class MainForm
 		{
 			e.Size = Math.Min(e.Size, atlas);
 		}
-		AtlasCore.Order order = atOrderCombo.SelectedIndex == 1 ? AtlasCore.Order.AsAdded : AtlasCore.Order.LargestFirst;
+		AtlasCore.Order order = atOrderCombo.SelectedIndex == 1 ? AtlasCore.Order.LargestFirst : AtlasCore.Order.Stack;
+		atList.ShowOrder = order == AtlasCore.Order.Stack;
 		atShrinkShift = 0;
 		int missing = AtlasCore.Pack(atEntries, atlas, atlas, AtlasPaddingPx, order);
 		while (missing > 0 && atShrinkChk.Checked && atShrinkShift < 6)
@@ -549,6 +558,7 @@ public partial class MainForm
 		{
 			Name = e.Name,
 			Size = e.Size,
+			ColorIndex = e.ColorIndex,
 			SourceWidth = e.SourceWidth,
 			SourceHeight = e.SourceHeight,
 			Placed = e.Placed,
@@ -578,12 +588,12 @@ public partial class MainForm
 			}
 			Rectangle r = new Rectangle((int)Math.Round(e.X * scale), (int)Math.Round(e.Y * scale), Math.Max(1, (int)Math.Round(e.W * scale) - 1), Math.Max(1, (int)Math.Round(e.H * scale) - 1));
 			bool sel = e == atList.Selected;
-			Color c = AtlasList.SwatchColor(i);
+			Color c = AtlasList.SwatchColor(e.ColorIndex);
 			using (Pen pen = new Pen(c, sel ? 4f : 2f))
 			{
 				g.DrawRectangle(pen, r);
 			}
-			string label = e.Name + "  " + e.W + "×" + e.H;
+			string label = (atList.ShowOrder ? (i + 1) + "  " : "") + e.Name + "  " + e.W + "×" + e.H;
 			using Font font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold);
 			Size ts = TextRenderer.MeasureText(label, font);
 			if (ts.Width + 8 < r.Width && ts.Height + 6 < r.Height)
