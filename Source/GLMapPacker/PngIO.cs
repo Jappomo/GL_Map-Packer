@@ -135,7 +135,13 @@ public static class PngIO
 	// Writes a 1-channel image as grayscale, 3 as RGB, 4 as RGBA, at 8 or 16 bits per sample.
 	public static void Write(string path, FloatImage img, bool sixteenBit)
 	{
-		int channels = img.Channels;
+		int rowLen = img.Width * img.Channels;
+		WriteRows(path, img.Width, img.Height, img.Channels, sixteenBit, (y, row) => Array.Copy(img.Data, (long)y * rowLen, row, 0, rowLen));
+	}
+
+	// Streams the image a row at a time: fillRow(y, row) fills `row` with width * channels values 0..1.
+	public static void WriteRows(string path, int width, int height, int channels, bool sixteenBit, Action<int, float[]> fillRow)
+	{
 		int colorType = channels switch
 		{
 			1 => 0,
@@ -145,70 +151,149 @@ public static class PngIO
 		};
 		int bytesPerSample = sixteenBit ? 2 : 1;
 		int bpp = channels * bytesPerSample;
-		int rowBytes = img.Width * bpp;
-		MemoryStream zdata = new MemoryStream();
-		zdata.WriteByte(0x78);
-		zdata.WriteByte(0x9C);
-		uint adlerA = 1;
-		uint adlerB = 0;
-		using (DeflateStream deflate = new DeflateStream(zdata, CompressionLevel.Optimal, leaveOpen: true))
-		{
-			byte[] prev = new byte[rowBytes];
-			byte[] cur = new byte[rowBytes];
-			byte[] filtered = new byte[rowBytes + 1];
-			for (int y = 0; y < img.Height; y++)
-			{
-				int s = y * img.Width * channels;
-				for (int i = 0; i < img.Width * channels; i++)
-				{
-					float v = img.Data[s + i];
-					v = v < 0f ? 0f : (v > 1f ? 1f : v);
-					if (sixteenBit)
-					{
-						int q = (int)(v * 65535f + 0.5f);
-						cur[i * 2] = (byte)(q >> 8);
-						cur[i * 2 + 1] = (byte)q;
-					}
-					else
-					{
-						cur[i] = (byte)(v * 255f + 0.5f);
-					}
-				}
-				// Paeth filter on every row: smooth height data compresses well with it.
-				filtered[0] = 4;
-				for (int i = 0; i < rowBytes; i++)
-				{
-					int a = i >= bpp ? cur[i - bpp] : 0;
-					int b = prev[i];
-					int c = i >= bpp ? prev[i - bpp] : 0;
-					filtered[i + 1] = (byte)(cur[i] - Paeth(a, b, c));
-				}
-				deflate.Write(filtered, 0, filtered.Length);
-				for (int i = 0; i < filtered.Length; i++)
-				{
-					adlerA = (adlerA + filtered[i]) % 65521;
-					adlerB = (adlerB + adlerA) % 65521;
-				}
-				byte[] t = prev;
-				prev = cur;
-				cur = t;
-			}
-		}
-		uint adler = (adlerB << 16) | adlerA;
-		zdata.WriteByte((byte)(adler >> 24));
-		zdata.WriteByte((byte)(adler >> 16));
-		zdata.WriteByte((byte)(adler >> 8));
-		zdata.WriteByte((byte)adler);
-		byte[] ihdr = new byte[13];
-		WriteInt32BE(ihdr, 0, img.Width);
-		WriteInt32BE(ihdr, 4, img.Height);
-		ihdr[8] = (byte)(sixteenBit ? 16 : 8);
-		ihdr[9] = (byte)colorType;
+		int rowBytes = width * bpp;
+		float[] values = new float[width * channels];
 		using FileStream fs = new FileStream(path, FileMode.Create, FileAccess.Write);
 		fs.Write(Signature, 0, Signature.Length);
+		byte[] ihdr = new byte[13];
+		WriteInt32BE(ihdr, 0, width);
+		WriteInt32BE(ihdr, 4, height);
+		ihdr[8] = (byte)(sixteenBit ? 16 : 8);
+		ihdr[9] = (byte)colorType;
 		WriteChunk(fs, "IHDR", ihdr, ihdr.Length);
-		WriteChunk(fs, "IDAT", zdata.GetBuffer(), (int)zdata.Length);
+		// The compressed data goes out in IDAT chunks as it is produced, so large images never sit
+		// in memory whole.
+		using (IdatStream idat = new IdatStream(fs))
+		{
+			idat.WriteByte(0x78);
+			idat.WriteByte(0x9C);
+			uint adlerA = 1;
+			uint adlerB = 0;
+			using (DeflateStream deflate = new DeflateStream(idat, CompressionLevel.Optimal, leaveOpen: true))
+			{
+				byte[] prev = new byte[rowBytes];
+				byte[] cur = new byte[rowBytes];
+				byte[] filtered = new byte[rowBytes + 1];
+				for (int y = 0; y < height; y++)
+				{
+					fillRow(y, values);
+					for (int i = 0; i < values.Length; i++)
+					{
+						float v = values[i];
+						v = v < 0f ? 0f : (v > 1f ? 1f : v);
+						if (sixteenBit)
+						{
+							int q = (int)(v * 65535f + 0.5f);
+							cur[i * 2] = (byte)(q >> 8);
+							cur[i * 2 + 1] = (byte)q;
+						}
+						else
+						{
+							cur[i] = (byte)(v * 255f + 0.5f);
+						}
+					}
+					// Paeth filter on every row: smooth height data compresses well with it.
+					filtered[0] = 4;
+					for (int i = 0; i < rowBytes; i++)
+					{
+						int a = i >= bpp ? cur[i - bpp] : 0;
+						int b = prev[i];
+						int c = i >= bpp ? prev[i - bpp] : 0;
+						filtered[i + 1] = (byte)(cur[i] - Paeth(a, b, c));
+					}
+					deflate.Write(filtered, 0, filtered.Length);
+					for (int i = 0; i < filtered.Length; i++)
+					{
+						adlerA = (adlerA + filtered[i]) % 65521;
+						adlerB = (adlerB + adlerA) % 65521;
+					}
+					byte[] t = prev;
+					prev = cur;
+					cur = t;
+				}
+			}
+			uint adler = (adlerB << 16) | adlerA;
+			idat.WriteByte((byte)(adler >> 24));
+			idat.WriteByte((byte)(adler >> 16));
+			idat.WriteByte((byte)(adler >> 8));
+			idat.WriteByte((byte)adler);
+		}
 		WriteChunk(fs, "IEND", new byte[0], 0);
+	}
+
+	// Buffers written bytes and emits them as IDAT chunks of up to 256 KB.
+	private sealed class IdatStream : Stream
+	{
+		private readonly Stream target;
+
+		private readonly MemoryStream buffer = new MemoryStream();
+
+		public IdatStream(Stream target)
+		{
+			this.target = target;
+		}
+
+		public override bool CanRead => false;
+
+		public override bool CanSeek => false;
+
+		public override bool CanWrite => true;
+
+		public override long Length => throw new NotSupportedException();
+
+		public override long Position
+		{
+			get
+			{
+				throw new NotSupportedException();
+			}
+			set
+			{
+				throw new NotSupportedException();
+			}
+		}
+
+		public override void Write(byte[] data, int offset, int count)
+		{
+			buffer.Write(data, offset, count);
+			if (buffer.Length >= 262144)
+			{
+				Flush();
+			}
+		}
+
+		public override void Flush()
+		{
+			if (buffer.Length > 0)
+			{
+				WriteChunk(target, "IDAT", buffer.GetBuffer(), (int)buffer.Length);
+				buffer.SetLength(0);
+			}
+		}
+
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
+				Flush();
+			}
+			base.Dispose(disposing);
+		}
+
+		public override int Read(byte[] data, int offset, int count)
+		{
+			throw new NotSupportedException();
+		}
+
+		public override long Seek(long offset, SeekOrigin origin)
+		{
+			throw new NotSupportedException();
+		}
+
+		public override void SetLength(long value)
+		{
+			throw new NotSupportedException();
+		}
 	}
 
 	private static byte[] Inflate(byte[] zlib, int expected)

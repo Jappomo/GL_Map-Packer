@@ -6,6 +6,7 @@ This guide walks through every tab. Each section is short: load something, chang
 - [Pack: build a channel-packed texture](#pack)
 - [Unpack: split a texture into channels](#unpack)
 - [Convert: normal, height and AO maps](#convert)
+- [Atlas: pack materials into one texture atlas](#atlas)
 - [Utility: flip and invert](#utility)
 - [Renamer: batch-rename texture files](#renamer)
 - [Injector: send a material to Maya](#injector)
@@ -152,6 +153,41 @@ Generates an AO map from a height map, using horizon-based ambient occlusion in 
 | **Quality** | 8, 16 or 32 sample directions. Higher quality is smoother but slower to save. |
 
 > **Tip:** use **16-bit** height maps where you can. 8-bit heights have only 256 levels, which shows up as contour lines in normals and AO. If an 8-bit height is all you have, a little **Smoothing** (Height → Normal) or a larger **Radius** (AO) hides the steps.
+
+---
+
+## Atlas
+
+Combine several materials into one texture atlas. Every material keeps the same spot in every map, so one set of UVs works for the albedo, normal, ORM and the rest.
+
+![Atlas tab](images/atlas.png)
+
+1. **Drop texture files** (or a whole folder) onto the Materials list or the preview, or press **Add textures**. Files are grouped into materials by name: `T_Rock_BaseColor.png`, `T_Rock_Normal.png` and `T_Rock_ORM.png` become one material **Rock** with three maps. The map type comes from the end of the file name:
+
+   | Map | Recognised endings |
+   |---|---|
+   | Albedo | `_BaseColor`, `_Albedo`, `_Diffuse`, `_Color`, `_Col` |
+   | Normal | `_Normal`, `_NormalGL`, `_NormalDX`, `_Nrm`, `_N` |
+   | ORM | `_ORM`, `_ARM` |
+   | Roughness, AO, Metallic | `_Roughness`, `_Rough`; `_AO`, `_Occlusion`; `_Metallic`, `_Metalness`, `_Metal` |
+   | Emissive, Opacity, Height | `_Emissive`, `_Emission`; `_Opacity`, `_Alpha`; `_Height`, `_Displacement`, `_Bump` |
+
+2. **Set each material's size** with **◀ ▶** in its row (64 to 8192 px, the longest side; non-square textures keep their shape). New materials start at **Size for new materials**, but never larger than their source.
+3. The atlas packs itself as you go. Each material takes the **top-most, then left-most** free spot, so the atlas fills from the top-left corner and moves down when a row is full. **Largest first** packs tightest; **As added** keeps your order.
+4. Pick a map in the selector above the preview to check each atlas. Click a material in the list to highlight its tile.
+5. Choose **PNG** (8 or 16-bit) or **TGA** and press **Export atlas**. You pick the base name, for example `T_Atlas_BaseColor.png`, and every map is written next to it (`T_Atlas_BaseColor`, `T_Atlas_Normal`, `T_Atlas_ORM`, …), plus `T_Atlas_layout.json`.
+
+| Setting | What it does |
+|---|---|
+| **Atlas size** | 512 to 8192 px square. |
+| **Padding between tiles** | Gap between materials. Each tile's edge pixels are stretched into it, so mipmaps don't bleed neighbouring colours or grey. |
+| **Occlusion / roughness / metallic** | **Packed ORM atlas** or **Separate R, AO, M atlases**. Materials can mix both forms: separate maps are packed into ORM (or an ORM is split) as needed. |
+| **Shrink all to fit when full** | When the materials don't fit, halves every size (keeping their proportions) until they do. Turn it off to see which ones don't fit; they're marked red in the list. |
+
+> **Notes**
+> - A material without a map gets a neutral value in that atlas: mid grey albedo, flat normal, ORM (1, 0.5, 0), black emissive, white opacity.
+> - The layout file lists each material's pixel rectangle and the `uvScale` / `uvOffset` that move its 0 to 1 UVs into the atlas (V up, as in Maya, Blender and most engines): `uv' = uv × uvScale + uvOffset`.
+> - Mixing OpenGL and DirectX normal maps in one atlas isn't converted; flip the odd ones out first with **Utility → Flip Y**.
 
 ---
 

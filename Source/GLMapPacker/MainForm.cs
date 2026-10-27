@@ -235,7 +235,8 @@ public partial class MainForm : Form
 			ApplyTheme();
 		};
 		tabs = new TabStrip();
-		tabs.Tabs = new string[6] { "Pack", "Unpack", "Convert", "Utility", "Renamer", "Injector" };
+		tabs.PillWidth = Ui.S(88);
+		tabs.Tabs = new string[7] { "Pack", "Unpack", "Convert", "Atlas", "Utility", "Renamer", "Injector" };
 		tabs.SelectedIndexChanged += delegate
 		{
 			ShowPage(tabs.SelectedIndex);
@@ -298,12 +299,14 @@ public partial class MainForm : Form
 		BuildPackPage();
 		BuildUnpackPage();
 		BuildConvertPage();
+		BuildAtlasPage();
 		BuildUtilityPage();
 		BuildRenamerPage();
 		BuildInjectorPage();
 		pageHost.Controls.Add(pagePack);
 		pageHost.Controls.Add(pageUnpack);
 		pageHost.Controls.Add(pageConvert);
+		pageHost.Controls.Add(pageAtlas);
 		pageHost.Controls.Add(pageUtility);
 		pageHost.Controls.Add(pageRenamer);
 		pageHost.Controls.Add(pageInjector);
@@ -314,9 +317,10 @@ public partial class MainForm : Form
 		pagePack.Visible = index == 0;
 		pageUnpack.Visible = index == 1;
 		pageConvert.Visible = index == 2;
-		pageUtility.Visible = index == 3;
-		pageRenamer.Visible = index == 4;
-		pageInjector.Visible = index == 5;
+		pageAtlas.Visible = index == 3;
+		pageUtility.Visible = index == 4;
+		pageRenamer.Visible = index == 5;
+		pageInjector.Visible = index == 6;
 		if (tabs.SelectedIndex != index)
 		{
 			tabs.SelectedIndex = index;
@@ -1302,7 +1306,7 @@ public partial class MainForm : Form
 		BackColor = current.AppBackground;
 		header.BackColor = current.Surface;
 		pageHost.BackColor = current.AppBackground;
-		Panel[] array = new Panel[6] { pagePack, pageUnpack, pageConvert, pageUtility, pageRenamer, pageInjector };
+		Panel[] array = new Panel[7] { pagePack, pageUnpack, pageConvert, pageAtlas, pageUtility, pageRenamer, pageInjector };
 		foreach (Panel panel in array)
 		{
 			panel.BackColor = current.AppBackground;
@@ -1314,6 +1318,7 @@ public partial class MainForm : Form
 		LayoutPackPage();
 		LayoutUnpackPage();
 		LayoutConvertPage();
+		LayoutAtlasPage();
 		LayoutUtilityPage();
 		LayoutRenamerPage();
 		LayoutInjectorPage();

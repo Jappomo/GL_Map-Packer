@@ -5,6 +5,7 @@ Requires Windows 10 or 11 with .NET Framework 4.8.
 
 ## New
 
+- **Atlas tab**: drop texture sets and give each material a size. They pack top-left first, moving down when a row is full, into one atlas per map type (Albedo, Normal, ORM or separate R/AO/M, Emissive, Opacity, Height) with a shared layout, padding that bleeds edge colours for mipmaps, shrink-to-fit, and a `_layout.json` with each material's UV scale and offset.
 - **Convert tab** with three map conversions and a live before/after preview:
   - **Normal → Height**: whole-image FFT Poisson integration, with height intensity, mid-point baseline, contrast and surface blur; OpenGL or DirectX input.
   - **Height → Normal**: Sobel gradient, with strength, smoothing and invert; OpenGL or DirectX output.
