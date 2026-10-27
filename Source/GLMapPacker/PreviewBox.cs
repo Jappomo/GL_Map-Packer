@@ -546,7 +546,10 @@ public class PreviewBox : Control, IThemeable
 		{
 			GfxUtil.DrawChip(g, CompareLabel, Ui.Label, new Point(x - before.Width - Ui.S(16) - m, m), chipBack, Color.White);
 		}
-		if (!string.IsNullOrEmpty(ImageLabel) && x + Ui.S(80) < base.Width)
+		// The right-hand label sits left of the channel toolbar (which is drawn over it).
+		Size after = TextRenderer.MeasureText(ImageLabel ?? "", Ui.Label);
+		int toolbarLeft = Interactive ? base.Width - Ui.S(10) - Ui.S(38) - Ui.S(6) - Ui.S(144) - Ui.S(4) : base.Width;
+		if (!string.IsNullOrEmpty(ImageLabel) && x + m + after.Width + Ui.S(24) < toolbarLeft)
 		{
 			GfxUtil.DrawChip(g, ImageLabel, Ui.Label, new Point(x + m, m), chipBack, Color.White);
 		}

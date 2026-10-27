@@ -7,6 +7,7 @@ This guide walks through every tab. Each section is short: load something, chang
 - [Unpack: split a texture into channels](#unpack)
 - [Convert: normal, height and AO maps](#convert)
 - [Atlas: pack materials into one texture atlas](#atlas)
+- [Validator: check and fix PBR maps](#validator)
 - [Utility: flip and invert](#utility)
 - [Renamer: batch-rename texture files](#renamer)
 - [Injector: send a material to Maya](#injector)
@@ -191,6 +192,43 @@ Combine several materials into one texture atlas. Every material keeps the same 
 > - A material without a map gets a neutral value in that atlas: mid grey albedo, flat normal, ORM (1, 0.5, 0), black emissive, white opacity.
 > - The layout file lists each material's pixel rectangle and the `uvScale` / `uvOffset` that move its 0 to 1 UVs into the atlas (V up, as in Maya, Blender and most engines): `uv' = uv × uvScale + uvOffset`.
 > - Mixing OpenGL and DirectX normal maps in one atlas isn't converted; flip the odd ones out first with **Utility → Flip Y**.
+
+---
+
+## Validator
+
+Check a PBR texture set (metal/roughness) against physically based ranges, see exactly which texels break them, and fix them by hand or with one click.
+
+![Validator](images/validator.png)
+
+1. **Load the maps**: drop a whole texture set onto the preview or the **Texture set** card (maps are assigned by file name), or drop/click each slot: **Albedo**, **Normal**, **ORM**, or separate **Roughness**, **Metallic** and **AO**.
+2. The **Results** list shows the share of texels failing each check, and the preview marks them in the check's colour, with moving stripes if **Animated warning stripes** is on. Drag the divider to compare **Original** with **Validated** (the fixed maps plus warnings). The selector above the preview switches between the maps.
+3. Fix the problems:
+   - press **Auto-correct** to set every fix needed for all enabled checks to pass (a message says what it changed), or
+   - adjust them yourself in the **Albedo**, **ORM** and **Normal** tabs on the right. **Reset fixes** puts everything back.
+4. Press **Save fixed maps**. Only maps that the fixes change are saved, as `<name>_fixed.png` (8 or 16-bit), and the result is checked again at full resolution.
+
+![After Auto-correct](images/validator-autocorrect.png)
+
+**Checks** (right-hand **Checks** tab):
+
+| Check | Fails when | Default |
+|---|---|---|
+| **BaseColor range** | a non-metal texel's brightness is below **Min** or above **Max** (sRGB 0 to 255) | 30 to 240 |
+| **Metal reflectance** | a metal texel (metallic ≥ 0.5) reflects less than **60%** or **70%** (sRGB brightness 153 or 179) | 70% |
+| **Roughness range** | roughness is below **Min** or above **Max** | 0.05 to 1.00 |
+
+**Fixes:**
+
+| Tab | Controls |
+|---|---|
+| **Albedo** | **Fix too-dark**, **Fix too-bright** and **Fix metal reflectance** (0 to 100%). They pick out the illegal texels and ease them into the legal range, keeping hue and gradients (no flat clipping). |
+| **ORM** | Pick **AO**, **Roughness** or **Metallic**, then **Min value**, **Max value**, **Mid-grey shift** and **Contrast** for that channel. Works on the ORM map or on the separate map. |
+| **Normal** | **Intensity**: 0 is flat, 1 unchanged, above 1 stronger. |
+
+> **Notes**
+> - Brightness is the colour's luminance (computed in linear light) expressed in sRGB 0 to 255, as most PBR guides quote it.
+> - Auto-correct makes the smallest change for each problem: it only turns on the albedo fixes that are needed, and remaps roughness only on the side that is out of range.
 
 ---
 

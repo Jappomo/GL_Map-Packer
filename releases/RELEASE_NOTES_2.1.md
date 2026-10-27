@@ -5,6 +5,7 @@ Requires Windows 10 or 11 with .NET Framework 4.8.
 
 ## New
 
+- **Validator tab**: checks a PBR texture set (albedo 30–240 sRGB, metal reflectance 60/70–100%, roughness range) and marks failing texels with colour-coded, optionally animated warnings, with an Original / Validated split. Fixes: albedo darks / brights / metal reflectance (hue-preserving, smooth), per-channel AO / roughness / metallic remap (min, max, mid-grey, contrast), normal intensity, and an **Auto-correct** button. Saves `_fixed` maps and re-checks them at full resolution.
 - **Atlas tab**: drop texture sets into the **Layer Stack**, give each layer a size and drag layers to set the order. Layer 1 is placed first; layers pack top-left first, moving down when a row is full, into one atlas per map type (Albedo, Normal, ORM or separate R/AO/M, Emissive, Opacity, Height) with a shared layout, padding that bleeds edge colours for mipmaps, shrink-to-fit, and a `_layout.json` with each material's UV scale and offset.
 - **Convert tab** with three map conversions and a live before/after preview:
   - **Normal → Height**: whole-image FFT Poisson integration, with height intensity, mid-point baseline, contrast and surface blur; OpenGL or DirectX input.

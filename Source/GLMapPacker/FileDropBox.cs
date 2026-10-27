@@ -20,6 +20,11 @@ public class FileDropBox : Control, IThemeable
 
 	public string Prompt { get; set; }
 
+	// Optional slot name shown in a fixed column on the left (e.g. "Albedo").
+	public string Caption { get; set; }
+
+	public int CaptionWidth { get; set; } = Ui.S(74);
+
 	public string Filter { get; set; }
 
 	// Shown after the file name, e.g. "1,204 tris • 8 islands".
@@ -156,7 +161,13 @@ public class FileDropBox : Control, IThemeable
 		Color border = dragHover ? current.Accent : (set ? current.Border : Theme.Mix(current.Border, current.TextMuted, 0.35));
 		GfxUtil.DrawRounded(g, r, Ui.S(8), border, dragHover ? Ui.S(1.5f) : 1f, !set && !dragHover);
 		int pad = Ui.S(12);
-		Rectangle text = new Rectangle(pad, 0, base.Width - pad * 2 - (set ? clearBtn.Width + Ui.S(6) : 0), base.Height);
+		int left = pad;
+		if (!string.IsNullOrEmpty(Caption))
+		{
+			TextRenderer.DrawText(g, Caption, Ui.Label, new Rectangle(pad, 0, CaptionWidth - pad, base.Height), set ? current.Text : current.TextMuted, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+			left = CaptionWidth;
+		}
+		Rectangle text = new Rectangle(left, 0, base.Width - left - pad - (set ? clearBtn.Width + Ui.S(6) : 0), base.Height);
 		if (!set)
 		{
 			TextRenderer.DrawText(g, Prompt, Ui.Small, text, dragHover ? current.Accent : current.TextMuted, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
@@ -164,11 +175,16 @@ public class FileDropBox : Control, IThemeable
 		}
 		string name = Path.GetFileName(filePath);
 		Size ns = TextRenderer.MeasureText(g, name, Ui.Body, text.Size, TextFormatFlags.NoPadding);
-		TextRenderer.DrawText(g, name, Ui.Body, text, current.Text, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
-		if (!string.IsNullOrEmpty(Info) && ns.Width + Ui.S(40) < text.Width)
+		TextRenderer.DrawText(g, name, Ui.Body, text, current.Text, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+		if (!string.IsNullOrEmpty(Info))
 		{
-			Rectangle info = new Rectangle(text.X + ns.Width + Ui.S(10), 0, text.Width - ns.Width - Ui.S(10), base.Height);
-			TextRenderer.DrawText(g, Info, Ui.Small, info, current.TextMuted, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+			// Only when it fits whole on the line; a cut-off size reads worse than none.
+			Size infoSize = TextRenderer.MeasureText(g, Info, Ui.Small, Size.Empty, TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+			if (ns.Width + Ui.S(10) + infoSize.Width <= text.Width)
+			{
+				Rectangle info = new Rectangle(text.X + ns.Width + Ui.S(10), 0, infoSize.Width + Ui.S(2), base.Height);
+				TextRenderer.DrawText(g, Info, Ui.Small, info, current.TextMuted, TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+			}
 		}
 	}
 }
