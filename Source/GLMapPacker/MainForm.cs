@@ -249,41 +249,19 @@ public partial class MainForm : Form
 		};
 	}
 
-	private static int BrandWidth => Ui.S(74);
-
 	private void LayoutHeader()
 	{
-		tabs.Location = new Point(BrandWidth, (header.Height - tabs.Height) / 2);
+		tabs.Location = new Point(Ui.S(24), (header.Height - tabs.Height) / 2);
 		toggle.Location = new Point(header.Width - Ui.S(24) - toggle.Width, (header.Height - toggle.Height) / 2);
 	}
 
-	// App mark (a 2x2 grid of channel colours; the name is in the title bar), plus the header's bottom border.
+	// The header's bottom border (the app name and icon are in the title bar).
 	private void PaintHeader(object sender, PaintEventArgs e)
 	{
 		Palette p = Theme.Current;
 		Graphics g = e.Graphics;
-		g.SmoothingMode = SmoothingMode.AntiAlias;
-		DrawAppMark(g, new Rectangle(Ui.S(24), (header.Height - Ui.S(30)) / 2, Ui.S(30), Ui.S(30)));
 		using Pen pen = new Pen(p.Border);
 		g.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
-	}
-
-	public static void DrawAppMark(Graphics g, Rectangle r)
-	{
-		int gap = Math.Max(1, r.Width / 12);
-		int cell = (r.Width - gap) / 2;
-		Color[] colors = new Color[4]
-		{
-			Color.FromArgb(232, 84, 80),
-			Color.FromArgb(108, 196, 92),
-			Color.FromArgb(66, 133, 255),
-			Color.FromArgb(160, 168, 180)
-		};
-		for (int i = 0; i < 4; i++)
-		{
-			Rectangle c = new Rectangle(r.X + i % 2 * (cell + gap), r.Y + i / 2 * (cell + gap), cell, cell);
-			GfxUtil.FillRounded(g, c, Math.Max(1, cell / 4), colors[i]);
-		}
 	}
 
 	// ---------------------------------------------------------------- pages
