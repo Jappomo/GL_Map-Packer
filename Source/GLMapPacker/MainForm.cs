@@ -249,7 +249,7 @@ public partial class MainForm : Form
 		};
 	}
 
-	private static int BrandWidth => Ui.S(214);
+	private static int BrandWidth => Ui.S(74);
 
 	private void LayoutHeader()
 	{
@@ -257,14 +257,13 @@ public partial class MainForm : Form
 		toggle.Location = new Point(header.Width - Ui.S(24) - toggle.Width, (header.Height - toggle.Height) / 2);
 	}
 
-	// App mark (a 2x2 grid of channel colours) and name, plus the header's bottom border.
+	// App mark (a 2x2 grid of channel colours; the name is in the title bar), plus the header's bottom border.
 	private void PaintHeader(object sender, PaintEventArgs e)
 	{
 		Palette p = Theme.Current;
 		Graphics g = e.Graphics;
 		g.SmoothingMode = SmoothingMode.AntiAlias;
 		DrawAppMark(g, new Rectangle(Ui.S(24), (header.Height - Ui.S(30)) / 2, Ui.S(30), Ui.S(30)));
-		TextRenderer.DrawText(g, "GL Map Packer", Ui.Font(12f, semibold: true), new Rectangle(Ui.S(64), 0, BrandWidth - Ui.S(64), header.Height), p.Text, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
 		using Pen pen = new Pen(p.Border);
 		g.DrawLine(pen, 0, header.Height - 1, header.Width, header.Height - 1);
 	}
