@@ -484,7 +484,18 @@ public partial class MainForm : Form
 		});
 		try
 		{
-			Bitmap result = await Task.Run(() => ImageCore.Pack(slotR.SourceImage, slotR.Pick, slotG.SourceImage, slotG.Pick, slotB.SourceImage, slotB.Pick, slotA.SourceImage, slotA.Pick, progress));
+			// The slot previews keep painting their bitmaps, so the worker gets its own copies:
+			// GDI+ throws "Bitmap region is already locked" if a paint hits a bitmap under LockBits.
+			Bitmap r = Snapshot(slotR.SourceImage), g = Snapshot(slotG.SourceImage), b = Snapshot(slotB.SourceImage), a = Snapshot(slotA.SourceImage);
+			Bitmap result;
+			try
+			{
+				result = await Task.Run(() => ImageCore.Pack(r, slotR.Pick, g, slotG.Pick, b, slotB.Pick, a, slotA.Pick, progress));
+			}
+			finally
+			{
+				r?.Dispose(); g?.Dispose(); b?.Dispose(); a?.Dispose();
+			}
 			packedImage = result;
 			packResult.Image = result;
 			packSaveBtn.Enabled = result != null;
@@ -619,6 +630,11 @@ public partial class MainForm : Form
 		}
 	}
 
+	private static Bitmap Snapshot(Bitmap bmp)
+	{
+		return bmp == null ? null : ImageCore.CloneArgb32(bmp);
+	}
+
 	private void LoadUnpack()
 	{
 		using OpenFileDialog openFileDialog = new OpenFileDialog();
@@ -641,10 +657,15 @@ public partial class MainForm : Form
 			{
 				unpackProgress.Value = v;
 			});
+			// unpackSource paints src while the worker runs, so split a copy (see DoPack).
+			Bitmap work = Snapshot(src);
 			Bitmap[] outs = await Task.Run(delegate
 			{
-				ImageCore.Split(src, forceOpaqueAlpha: true, out var outR, out var outG, out var outB, out var outA, progress);
-				return new Bitmap[4] { outR, outG, outB, outA };
+				using (work)
+				{
+					ImageCore.Split(work, forceOpaqueAlpha: true, out var outR, out var outG, out var outB, out var outA, progress);
+					return new Bitmap[4] { outR, outG, outB, outA };
+				}
 			});
 			viewR.SetImage(outs[0], path);
 			viewG.SetImage(outs[1], path);

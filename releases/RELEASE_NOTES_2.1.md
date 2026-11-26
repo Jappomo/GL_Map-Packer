@@ -24,6 +24,7 @@ Requires Windows 10 or 11 with .NET Framework 4.8.
 - **TGA files can now be opened.** They appeared in every open dialog, but Windows' image library can't read TGA, so loading failed. GL Map Packer now has its own TGA reader (uncompressed and RLE; greyscale, colour and palette; 15 to 32-bit).
 - **Height → AO is closer to baked AO.** A new *Detailed* sampling mode (the default; *Classic* keeps the old look) samples more densely near each pixel. Against a reference AO bake it scores 0.84 vs 0.81 correlation, at the same speed. The default radius is now 32 px.
 - Dropping an image directly onto a Pack slot's preview now loads it.
+- **Pack and Unpack no longer crash with "Bitmap region is already locked".** The background job locked the same bitmap the preview was drawing; it now works on its own copy.
 
 ## Notes
 
